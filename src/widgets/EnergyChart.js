@@ -52,7 +52,7 @@ const EnergyChart = ({ classes }) => {
         dailyUsageDoc,
         entryIterator: doc => {
           const { date: docDate, consumption, generation } = doc.data();
-          const ts = moment(docDate.toDate());
+          const ts = moment(docDate.toDate()).utc();
           const hourKey = ts.format("HH");
           hourlyStats[hourKey] = hourlyStats[hourKey] || {
             index: parseInt(hourKey, 10),
