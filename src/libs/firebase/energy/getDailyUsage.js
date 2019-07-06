@@ -2,7 +2,7 @@ export default async ({ firebase }) => {
   const dailyReadRef = firebase
     .firestore()
     .collection(process.env.REACT_APP_FIREBASE_DAYLY_USAGE_COLLECTION_NAME)
-    .orderBy("timestamp", "desc")
+    .orderBy("date", "desc")
     .limit(1);
 
   const dailyUsageQS = await dailyReadRef.get();

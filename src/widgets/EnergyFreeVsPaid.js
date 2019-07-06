@@ -1,5 +1,4 @@
 import React, { useContext, useEffect, useState } from "react";
-import { map, sortBy, sumBy } from "lodash";
 import moment from "moment";
 import numeral from "numeral";
 import { ResponsivePie } from "@nivo/pie";
@@ -8,35 +7,37 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import Typography from "@material-ui/core/Typography";
 import Card from "@material-ui/core/Card";
 import CardContent from "@material-ui/core/CardContent";
-import Chip from "@material-ui/core/Chip";
-import Avatar from "@material-ui/core/Avatar";
-import BatteryChargingFull from "@material-ui/icons/BatteryChargingFull";
-import SettingsInputComponent from "@material-ui/icons/SettingsInputComponent";
-import ReportProblem from "@material-ui/icons/ReportProblem";
-import ApplicationContext from "../../contexts/ApplicationContext";
-import getDailyUsage from "../../libs/firebase/energy/getDailyUsage";
-import getFifteenMinuteReads from "../../libs/firebase/energy/getFifteenMinuteReads";
+import ApplicationContext from "../contexts/ApplicationContext";
+import getDailyUsage from "../libs/firebase/energy/getDailyUsage";
+import getFifteenMinuteReads from "../libs/firebase/energy/getFifteenMinuteReads";
 
 const styles = theme => ({
   progress: {
-    margin: theme.spacing.unit * 2
+    margin: theme.spacing(2)
   },
   chartContainer: {
     height: 240,
-    marginBottom: theme.spacing.unit * 2
+    marginBottom: theme.spacing(2)
   },
   dateName: {
-    marginLeft: theme.spacing.unit / 2
-  },
-  chip: {
-    marginRight: theme.spacing.unit
+    marginLeft: theme.spacing(0.5)
   },
   root: {
-    margin: theme.spacing.unit
+    margin: theme.spacing(1)
   }
 });
 
-const EnergyChart = ({ classes }) => {
+const EnergyFreeVsPaid = ({
+  classes,
+  valueCalculator = ({ value }) => value,
+  titleCalculator = ({ stats }) => {
+    const free = numeral(
+      (stats.free.value() + stats.solar.value()) /
+        (stats.free.value() + stats.paid.value() + stats.solar.value())
+    );
+    return `${free.format("0%")} FREE (kWh)`;
+  }
+}) => {
   const { firebase } = useContext(ApplicationContext);
   const [chartData, setChartData] = useState(undefined);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,35 +60,51 @@ const EnergyChart = ({ classes }) => {
       );
       const freeEndsAtInMinute =
         freeEndsAt.get("hour") * 60 + freeEndsAt.get("minute");
-      const stats = {};
+      const stats = {
+        free: numeral(0),
+        paid: numeral(0),
+        solar: numeral(0)
+      };
       await getFifteenMinuteReads({
         firebase,
         dailyUsageDoc,
         entryIterator: doc => {
-          const { timestamp, consumption } = doc.data();
-          const ts = moment(timestamp).utc();
+          const { date: docDate, consumption, generation } = doc.data();
+          const ts = moment(docDate.toDate());
           const momentInMinute = ts.get("hour") * 60 + ts.get("minute");
           const key =
             momentInMinute >= freeStartsAtInMinute ||
             momentInMinute < freeEndsAtInMinute
               ? "free"
               : "paid";
-          stats[key] = stats[key] || numeral(0);
-          stats[key].add(consumption);
+          stats[key].add(valueCalculator({ value: consumption, date: ts }));
+          stats.solar.add(valueCalculator({ value: generation, date: ts }));
         }
       });
 
       setChartData({
-        date: moment(dailyUsage.timestamp),
-        entries: map(stats, (value, id) => ({
-          id,
-          value: value.format("0.0"),
-          label: id,
-          color: id === "free" ? "hsl(151, 70%, 50%)" : "hsl(30, 70%, 50%)"
-        })),
-        free: numeral(
-          stats.free.value() / (stats.free.value() + stats.paid.value())
-        )
+        date: moment(dailyUsage.date.toDate()),
+        stats,
+        entries: [
+          {
+            id: "free",
+            value: stats.free.value(),
+            label: "Free",
+            color: "hsl(160, 70%, 50%)"
+          },
+          {
+            id: "solar",
+            value: stats.solar.value(),
+            label: "Solar",
+            color: "hsl(90, 70%, 50%)"
+          },
+          {
+            id: "charge",
+            value: stats.paid.value(),
+            label: "Charge",
+            color: "hsl(30, 70%, 50%)"
+          }
+        ]
       });
       setIsLoading(false);
     }
@@ -97,16 +114,13 @@ const EnergyChart = ({ classes }) => {
   if (isLoading) {
     return <CircularProgress className={classes.progress} />;
   }
-  const { date, entries, free } = chartData;
-  const today = moment();
+  const { date, entries, stats } = chartData;
+
   return (
     <Card className={classes.root}>
       <CardContent className={classes.cardContent}>
         <Typography gutterBottom variant="subtitle1" component="h2">
-          {free.format("0%")} FREE for
-          <span className={classes.dateName}>
-            {date.calendar(today, { lastDay: "[Yesterday]" })}{" "}
-          </span>
+          {titleCalculator({ stats })} for
           <span className={classes.dateName}>
             {date.format("MMMM Do, YYYY")}
           </span>
@@ -142,4 +156,4 @@ const EnergyChart = ({ classes }) => {
   );
 };
 
-export default withStyles(styles)(EnergyChart);
+export default withStyles(styles)(EnergyFreeVsPaid);

@@ -13,26 +13,26 @@ import Avatar from "@material-ui/core/Avatar";
 import BatteryChargingFull from "@material-ui/icons/BatteryChargingFull";
 import SettingsInputComponent from "@material-ui/icons/SettingsInputComponent";
 import ReportProblem from "@material-ui/icons/ReportProblem";
-import ApplicationContext from "../../contexts/ApplicationContext";
-import getDailyUsage from "../../libs/firebase/energy/getDailyUsage";
-import getFifteenMinuteReads from "../../libs/firebase/energy/getFifteenMinuteReads";
+import ApplicationContext from "../contexts/ApplicationContext";
+import getDailyUsage from "../libs/firebase/energy/getDailyUsage";
+import getFifteenMinuteReads from "../libs/firebase/energy/getFifteenMinuteReads";
 
 const styles = theme => ({
   progress: {
-    margin: theme.spacing.unit * 2
+    margin: theme.spacing(2)
   },
   chartContainer: {
     height: 500,
-    marginBottom: theme.spacing.unit * 2
+    marginBottom: theme.spacing(2)
   },
   dateName: {
-    marginLeft: theme.spacing.unit
+    marginLeft: theme.spacing(0.5)
   },
   chip: {
-    marginRight: theme.spacing.unit
+    marginRight: theme.spacing(1)
   },
   root: {
-    margin: theme.spacing.unit
+    margin: theme.spacing(1)
   }
 });
 
@@ -51,8 +51,8 @@ const EnergyChart = ({ classes }) => {
         firebase,
         dailyUsageDoc,
         entryIterator: doc => {
-          const { timestamp, consumption, generation } = doc.data();
-          const ts = moment(timestamp).utc();
+          const { date: docDate, consumption, generation } = doc.data();
+          const ts = moment(docDate.toDate());
           const hourKey = ts.format("HH");
           hourlyStats[hourKey] = hourlyStats[hourKey] || {
             index: parseInt(hourKey, 10),
@@ -79,7 +79,7 @@ const EnergyChart = ({ classes }) => {
         "index"
       );
       setChartData({
-        date: moment(dailyUsage.timestamp),
+        date: moment(dailyUsage.date.toDate()),
         entries: stats
       });
       setIsLoading(false);
@@ -91,7 +91,6 @@ const EnergyChart = ({ classes }) => {
     return <CircularProgress className={classes.progress} size={50} />;
   }
   const { date, entries } = chartData;
-  const today = moment();
   const totalConsumption = numeral(sumBy(entries, "consumption") / 1000);
   const totalGeneration = numeral(sumBy(entries, "generation") / 1000);
   const excessConsumption = numeral(totalConsumption).subtract(
@@ -104,11 +103,8 @@ const EnergyChart = ({ classes }) => {
   return (
     <Card className={classes.root}>
       <CardContent className={classes.cardContent}>
-        <Typography gutterBottom variant="h5" component="h2">
+        <Typography gutterBottom variant="subtitle1" component="h2">
           Power Consumption vs. Generation for
-          <span className={classes.dateName}>
-            {date.calendar(today, { lastDay: "[Yesterday]" })}{" "}
-          </span>
           <span className={classes.dateName}>
             {date.format("MMMM Do, YYYY")}
           </span>

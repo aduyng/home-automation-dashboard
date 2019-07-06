@@ -1,7 +1,7 @@
 import React from "react";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import { Helmet } from "react-helmet";
-import EnergyPage from "../../pages/Energy/Energy";
+import EnergyPage from "../pages/EnergyPage";
 
 export default () => {
   return (
