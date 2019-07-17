@@ -3,6 +3,7 @@ import moment from "moment";
 import numeral from "numeral";
 import { ResponsivePie } from "@nivo/pie";
 import { withStyles } from "@material-ui/core/styles";
+import { useTheme } from '@material-ui/core/styles';
 import CircularProgress from "@material-ui/core/CircularProgress";
 import Typography from "@material-ui/core/Typography";
 import Card from "@material-ui/core/Card";
@@ -38,9 +39,10 @@ const EnergyFreeVsPaid = ({
     return `${free.format("0%")} FREE (kWh)`;
   }
 }) => {
-  const { firebase } = useContext(ApplicationContext);
+  const { firebase, config } = useContext(ApplicationContext);
   const [chartData, setChartData] = useState(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const theme = useTheme();
 
   useEffect(() => {
     async function fetchDailyUsage() {
@@ -48,18 +50,15 @@ const EnergyFreeVsPaid = ({
       const dailyUsageDoc = await getDailyUsage({ firebase });
       const dailyUsage = dailyUsageDoc.data();
 
-      const freeStartsAt = moment(
-        process.env.REACT_APP_FREE_ENERY_PERIOD_STARTS_AT,
-        "hh:mm A"
-      );
+      const freeStartsAt = moment(config.freeEnergyPeriodStartsAt, "hh:mm A");
+
       const freeStartsAtInMinute =
         freeStartsAt.get("hour") * 60 + freeStartsAt.get("minute");
-      const freeEndsAt = moment(
-        process.env.REACT_APP_FREE_ENERY_PERIOD_ENDS_AT,
-        "hh:mm A"
-      );
+
+      const freeEndsAt = moment(config.freeEnergyPeriodEndsAt, "hh:mm A");
       const freeEndsAtInMinute =
         freeEndsAt.get("hour") * 60 + freeEndsAt.get("minute");
+
       const stats = {
         free: numeral(0),
         paid: numeral(0),
@@ -138,17 +137,22 @@ const EnergyFreeVsPaid = ({
             borderColor={{ from: "color", modifiers: [["darker", 0.2]] }}
             radialLabelsSkipAngle={10}
             radialLabelsTextXOffset={6}
-            radialLabelsTextColor="#333333"
+            radialLabelsTextColor={theme.palette.common.white}
             radialLabelsLinkOffset={0}
             radialLabelsLinkDiagonalLength={16}
             radialLabelsLinkHorizontalLength={24}
             radialLabelsLinkStrokeWidth={1}
             radialLabelsLinkColor={{ from: "color" }}
             slicesLabelsSkipAngle={10}
-            slicesLabelsTextColor="#333333"
+            slicesLabelsTextColor={theme.palette.common.white}
             animate={true}
             motionStiffness={90}
             motionDamping={15}
+            tooltip={({ id, value, color }) => (
+              <strong style={{ color }}>
+                {id}: {value}
+              </strong>
+            )}
           />
         </div>
       </CardContent>

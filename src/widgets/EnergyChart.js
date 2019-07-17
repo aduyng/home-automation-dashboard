@@ -4,6 +4,7 @@ import moment from "moment";
 import numeral from "numeral";
 import { ResponsiveBar } from "@nivo/bar";
 import { withStyles } from "@material-ui/core/styles";
+import { useTheme } from '@material-ui/core/styles';
 import CircularProgress from "@material-ui/core/CircularProgress";
 import Typography from "@material-ui/core/Typography";
 import Card from "@material-ui/core/Card";
@@ -40,6 +41,7 @@ const EnergyChart = ({ classes }) => {
   const { firebase } = useContext(ApplicationContext);
   const [chartData, setChartData] = useState(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const theme = useTheme();
 
   useEffect(() => {
     async function fetchDailyUsage() {
@@ -52,7 +54,7 @@ const EnergyChart = ({ classes }) => {
         dailyUsageDoc,
         entryIterator: doc => {
           const { date: docDate, consumption, generation } = doc.data();
-          const ts = moment(docDate.toDate()).utc();
+          const ts = moment(docDate.toDate());
           const hourKey = ts.format("HH");
           hourlyStats[hourKey] = hourlyStats[hourKey] || {
             index: parseInt(hourKey, 10),
@@ -70,11 +72,11 @@ const EnergyChart = ({ classes }) => {
       const stats = sortBy(
         map(hourlyStats, stat => ({
           ...stat,
-          generation: stat.generation.value() * 1000,
+          generation: stat.generation.value(),
           consumptionColor: "hsl(30, 70%, 50%)",
-          consumption: stat.consumption.value() * 1000,
+          consumption: stat.consumption.value(),
           generationColor: "hsl(151, 70%, 50%)",
-          total: stat.total.value() * 1000
+          total: stat.total.value()
         })),
         "index"
       );
@@ -91,8 +93,8 @@ const EnergyChart = ({ classes }) => {
     return <CircularProgress className={classes.progress} size={50} />;
   }
   const { date, entries } = chartData;
-  const totalConsumption = numeral(sumBy(entries, "consumption") / 1000);
-  const totalGeneration = numeral(sumBy(entries, "generation") / 1000);
+  const totalConsumption = numeral(sumBy(entries, "consumption"));
+  const totalGeneration = numeral(sumBy(entries, "generation"));
   const excessConsumption = numeral(totalConsumption).subtract(
     totalGeneration.value()
   );
@@ -100,6 +102,21 @@ const EnergyChart = ({ classes }) => {
   const excessGeneration = numeral(totalGeneration).subtract(
     totalConsumption.value()
   );
+
+  const chartTheme = {
+    axis: {
+      ticks: {
+        text: {
+          fill: theme.palette.common.white
+        }
+      },
+      legend: {
+        text:{
+          fill: theme.palette.common.white
+        }
+      },
+    }
+  };
   return (
     <Card className={classes.root}>
       <CardContent className={classes.cardContent}>
@@ -185,12 +202,19 @@ const EnergyChart = ({ classes }) => {
               legendPosition: "middle",
               legendOffset: -50
             }}
+            labelFormat={value => value.toFixed(2)}
             labelSkipWidth={12}
             labelSkipHeight={12}
             labelTextColor={{ from: "color", modifiers: [["darker", 1.6]] }}
             animate={true}
             motionStiffness={90}
             motionDamping={15}
+            theme={chartTheme}
+            tooltip={({ id, value, color }) => (
+              <strong style={{ color }}>
+                {id}: {value.toFixed(2)} kWh
+              </strong>
+            )}
           />
         </div>
       </CardContent>

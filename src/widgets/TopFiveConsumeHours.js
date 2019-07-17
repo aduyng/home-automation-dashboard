@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { map, sortBy, takeRight } from "lodash";
 import moment from "moment";
 import numeral from "numeral";
+import { useTheme } from "@material-ui/core/styles";
 import { ResponsiveBar } from "@nivo/bar";
 import { withStyles } from "@material-ui/core/styles";
 import CircularProgress from "@material-ui/core/CircularProgress";
@@ -32,26 +33,22 @@ const styles = theme => ({
 });
 
 const EnergyChart = ({ classes }) => {
-  const { firebase } = useContext(ApplicationContext);
+  const { firebase, config } = useContext(ApplicationContext);
   const [chartData, setChartData] = useState(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const theme = useTheme();
 
   useEffect(() => {
     async function fetchDailyUsage() {
       setIsLoading(true);
       const dailyUsageDoc = await getDailyUsage({ firebase });
       const dailyUsage = dailyUsageDoc.data();
+      const freeStartsAt = moment(config.freeEnergyPeriodStartsAt, "hh:mm A");
 
-      const freeStartsAt = moment(
-        process.env.REACT_APP_FREE_ENERY_PERIOD_STARTS_AT,
-        "hh:mm A"
-      );
       const freeStartsAtInMinute =
         freeStartsAt.get("hour") * 60 + freeStartsAt.get("minute");
-      const freeEndsAt = moment(
-        process.env.REACT_APP_FREE_ENERY_PERIOD_ENDS_AT,
-        "hh:mm A"
-      );
+
+      const freeEndsAt = moment(config.freeEnergyPeriodEndsAt, "hh:mm A");
       const freeEndsAtInMinute =
         freeEndsAt.get("hour") * 60 + freeEndsAt.get("minute");
 
@@ -103,6 +100,21 @@ const EnergyChart = ({ classes }) => {
   }
   const { date, entries } = chartData;
 
+  const chartTheme = {
+    axis: {
+      ticks: {
+        text: {
+          fill: theme.palette.common.white
+        }
+      },
+      legend: {
+        text: {
+          fill: theme.palette.common.white
+        }
+      }
+    }
+  };
+
   return (
     <Card className={classes.root}>
       <CardContent className={classes.cardContent}>
@@ -124,11 +136,7 @@ const EnergyChart = ({ classes }) => {
             borderColor={{ from: "color", modifiers: [["darker", 1.6]] }}
             axisTop={null}
             axisRight={null}
-            axisBottom={{
-              tickSize: 5,
-              tickPadding: 5,
-              tickRotation: 0
-            }}
+            axisBottom={null}
             axisLeft={{
               tickSize: 5,
               tickPadding: 5,
@@ -139,10 +147,15 @@ const EnergyChart = ({ classes }) => {
             }}
             labelSkipWidth={12}
             labelSkipHeight={12}
-            labelTextColor={{ from: "color", modifiers: [["darker", 1.6]] }}
             animate={true}
             motionStiffness={90}
             motionDamping={15}
+            theme={chartTheme}
+            tooltip={({ id, value, color }) => (
+              <strong style={{ color }}>
+                {id}: {value}
+              </strong>
+            )}
           />
         </div>
       </CardContent>
