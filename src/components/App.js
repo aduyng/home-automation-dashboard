@@ -1,15 +1,13 @@
-import React, { useContext, useEffect, useState } from "react";
-import { filter, sortBy } from "lodash";
+import React, { useEffect, useState } from "react";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import { Helmet } from "react-helmet";
 import { createMuiTheme } from "@material-ui/core/styles";
 import ApplicationContext from "../contexts/ApplicationContext";
 import firebase from "../libs/firebase/firebase";
-import Page from "./Page";
 import { ThemeProvider } from "@material-ui/styles";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import Grid from "@material-ui/core/Grid";
-import * as Widgets from "../widgets/index";
+import MainContent from "./MainContent";
+import BlackScreen from "./BlackScreen";
 
 const theme = createMuiTheme({
   palette: {
@@ -18,34 +16,32 @@ const theme = createMuiTheme({
   background: "black"
 });
 
-function renderMainContent({ pages }) {
-  const activePages = filter(pages, page => page.disabled !== true);
-  const sortedPages = sortBy(activePages, "priority");
-  return sortedPages.map(page => {
-    return (
-      <Page key={page.name}>
-        <Grid container spacing={1}>
-          {page.widgets.map(widget => {
-            const key = `${page.name}-${widget.name}`;
-            const WidgetClass = Widgets[widget.name];
-            if (!WidgetClass) {
-              return null;
-            }
-            return (
-              <Grid key={key} item {...widget.sizes}>
-                <WidgetClass />
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Page>
-    );
-  });
-}
-
 export default ({ manifest }) => {
   const [config, setConfig] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState(null);
+
+  const registerStateChangeListener = () => {
+    firebase
+      .database()
+      .ref(process.env.REACT_APP_FIREBASE_DASHBOARD_STATE_PATH)
+      .on("value", snapshot => {
+        const newState = snapshot.val();
+        console.log("state changes", newState);
+        setState({ ...state, ...newState });
+      });
+  };
+
+  const registerPresentSensorStateChangeListener = ({ config }) => {
+    firebase
+      .database()
+      .ref(config.presentSensorPath)
+      .on("value", snapshot => {
+        const val = snapshot.val();
+        console.log(`got value of ${config.presentSensorPath}=${val} `);
+        setState({ ...state, userPresented: val === "active" });
+      });
+  };
 
   useEffect(() => {
     async function fetchApplicationConfiguration() {
@@ -56,14 +52,25 @@ export default ({ manifest }) => {
         .ref(process.env.REACT_APP_FIREBASE_DASHBOARD_CONFIGURATION_PATH)
         .once("value");
 
-      setConfig(querySnapshot.val());
+      const config = querySnapshot.val();
+      setConfig(config);
+
+      const stateQuerySnapshot = await firebase
+        .database()
+        .ref(process.env.REACT_APP_FIREBASE_DASHBOARD_STATE_PATH)
+        .once("value");
+      setState(stateQuerySnapshot.val());
       setIsLoading(false);
+
+      registerStateChangeListener();
+      registerPresentSensorStateChangeListener({ config });
     }
     fetchApplicationConfiguration();
   }, []);
 
+  console.log("render", Date.now());
   return (
-    <ApplicationContext.Provider value={{ firebase, config }}>
+    <ApplicationContext.Provider value={{ firebase, config, state }}>
       <ThemeProvider theme={theme}>
         <div className="App">
           <CssBaseline />
@@ -76,7 +83,10 @@ export default ({ manifest }) => {
             />
           </Helmet>
           {isLoading && <CircularProgress />}
-          {!isLoading && renderMainContent(config)}
+          {!isLoading && !state.userPresented && <BlackScreen />}
+          {!isLoading && state.userPresented && (
+            <MainContent pages={config.pages} />
+          )}
         </div>
       </ThemeProvider>
     </ApplicationContext.Provider>
