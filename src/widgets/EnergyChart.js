@@ -38,7 +38,7 @@ const styles = theme => ({
 });
 
 const EnergyChart = ({ classes }) => {
-  const { firebase } = useContext(ApplicationContext);
+  const { firebase, config } = useContext(ApplicationContext);
   const [chartData, setChartData] = useState(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const theme = useTheme();
@@ -46,11 +46,12 @@ const EnergyChart = ({ classes }) => {
   useEffect(() => {
     async function fetchDailyUsage() {
       setIsLoading(true);
-      const dailyUsageDoc = await getDailyUsage({ firebase });
+      const dailyUsageDoc = await getDailyUsage({ firebase, config });
       const dailyUsage = dailyUsageDoc.data();
       const hourlyStats = {};
       await getFifteenMinuteReads({
         firebase,
+        config,
         dailyUsageDoc,
         entryIterator: doc => {
           const { date: docDate, consumption, generation } = doc.data();

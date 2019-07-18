@@ -41,7 +41,7 @@ const EnergyChart = ({ classes }) => {
   useEffect(() => {
     async function fetchDailyUsage() {
       setIsLoading(true);
-      const dailyUsageDoc = await getDailyUsage({ firebase });
+      const dailyUsageDoc = await getDailyUsage({ firebase, config });
       const dailyUsage = dailyUsageDoc.data();
       const freeStartsAt = moment(config.freeEnergyPeriodStartsAt, "hh:mm A");
 
@@ -55,6 +55,7 @@ const EnergyChart = ({ classes }) => {
       const hourlyStats = {};
       await getFifteenMinuteReads({
         firebase,
+        config,
         dailyUsageDoc,
         entryIterator: doc => {
           const { date: docDate, consumption, generation } = doc.data();

@@ -1,10 +1,10 @@
-export default async ({ firebase, dailyUsageDoc, entryIterator }) => {
+export default async ({ firebase, config, dailyUsageDoc, entryIterator }) => {
   const fifteenMinuteReadsRef = firebase
     .firestore()
-    .collection(process.env.REACT_APP_FIREBASE_DAYLY_USAGE_COLLECTION_NAME)
+    .collection(config.firestoreDailyUsageCollectionName)
     .doc(dailyUsageDoc.id)
     .collection(
-      process.env.REACT_APP_FIREBASE_FIFTEEN_MINUTE_READ_COLLECTION_NAME
+      config.firestoreFifteenMinuteReadsCollectionName
     );
 
   const dailyUfifteenMinuteReadsQS = await fifteenMinuteReadsRef.get();
