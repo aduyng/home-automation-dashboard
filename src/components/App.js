@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { filter, sortBy } from "lodash";
 import CssBaseline from "@material-ui/core/CssBaseline";
 import { Helmet } from "react-helmet";
 import { createMuiTheme } from "@material-ui/core/styles";
@@ -16,10 +17,10 @@ const theme = createMuiTheme({
   background: "black"
 });
 
-export default ({ manifest }) => {
-  const [config, setConfig] = useState(null);
+export default () => {
+  const [config, setConfig] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const [state, setState] = useState(null);
+  const [state, setState] = useState({});
 
   const registerStateChangeListener = () => {
     firebase
@@ -43,17 +44,38 @@ export default ({ manifest }) => {
       });
   };
 
+  const registerConfigChangeListener = () => {
+    firebase
+      .database()
+      .ref(process.env.REACT_APP_FIREBASE_DASHBOARD_CONFIGURATION_PATH)
+      .on("value", snapshot => {
+        const val = snapshot.val();
+        console.log(
+          `got new value for ${
+            process.env.REACT_APP_FIREBASE_DASHBOARD_CONFIGURATION_PATH
+          }`,
+          val
+        );
+        setConfig(val);
+      });
+  };
+
   useEffect(() => {
     async function fetchApplicationConfiguration() {
       setIsLoading(true);
-      setConfig({ manifest });
       const querySnapshot = await firebase
         .database()
         .ref(process.env.REACT_APP_FIREBASE_DASHBOARD_CONFIGURATION_PATH)
         .once("value");
 
-      const config = querySnapshot.val();
-      setConfig(config);
+      const cfg = querySnapshot.val();
+      console.log(
+        `got new value for ${
+          process.env.REACT_APP_FIREBASE_DASHBOARD_CONFIGURATION_PATH
+        }`,
+        cfg
+      );
+      setConfig(cfg);
 
       const stateQuerySnapshot = await firebase
         .database()
@@ -63,12 +85,19 @@ export default ({ manifest }) => {
       setIsLoading(false);
 
       registerStateChangeListener();
-      registerPresentSensorStateChangeListener({ config });
+      registerPresentSensorStateChangeListener({ config: cfg });
+      registerConfigChangeListener();
     }
     fetchApplicationConfiguration();
   }, []);
+  console.log(
+    `render the entire application again at: ${new Date().toString()}`,
+    config.pages
+  );
 
-  console.log("render", Date.now());
+  const activePages = filter(config.pages, page => page.disabled !== true);
+  const sortedPages = sortBy(activePages, "priority");
+
   return (
     <ApplicationContext.Provider value={{ firebase, config, state }}>
       <ThemeProvider theme={theme}>
@@ -83,10 +112,8 @@ export default ({ manifest }) => {
             />
           </Helmet>
           {isLoading && <CircularProgress />}
-          {!isLoading && !state.userPresented && <BlackScreen />}
-          {!isLoading && state.userPresented && (
-            <MainContent pages={config.pages} />
-          )}
+          {!isLoading && <BlackScreen show={!state.userPresented} />}
+          {!isLoading && <MainContent pages={sortedPages} />}
         </div>
       </ThemeProvider>
     </ApplicationContext.Provider>
