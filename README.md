@@ -21,7 +21,8 @@ docker run -p 8080:80 aduyng/home-automation-dashboard:latest
 1. ssh into pi and move the file to document root of nginx
     ```bash
     ssh pi@192.168.86.7
-    sudo cp -r /home/pi/Downloads/build/* /var/www/html
+    sudo rm -rf /var/www/html/*
+    sudo mv /home/pi/Downloads/build/* /var/www/html/
     ```
 1. reboot the pi
     ```bash
