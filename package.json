@@ -11,7 +11,7 @@
     "@nivo/generators": "0.59.0",
     "@nivo/pie": "0.59.1",
     "firebase": "6.2.4",
-    "lodash": "4.17.14",
+    "lodash": "4.17.19",
     "material-ui": "0.20.2",
     "moment": "2.24.0",
     "numeral": "2.0.6",
